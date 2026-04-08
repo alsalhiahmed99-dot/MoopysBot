@@ -5,14 +5,14 @@ import os
 import random
 from dotenv import load_dotenv
 
-# 1. تحميل الإعدادات والتوكن
+# 1. تحميل التوكن من ملف .env أو إعدادات Railway
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
 
-# 2. إعدادات البوت والأذونات (Intents)
+# 2. إعدادات الأذونات (Intents)
 intents = discord.Intents.default()
 intents.message_content = True
-intents.members = True  # ضروري عشان إيفنت الترحيب يشتغل
+intents.members = True  # ضروري عشان الترحيب وأمر الـ ac يشتغلوا صح
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # ملف حفظ البيانات
@@ -33,13 +33,12 @@ def save_credits(data):
 
 @bot.event
 async def on_ready():
-    # تغيير حالة البوت عشان يبين احترافي
     await bot.change_presence(activity=discord.Game(name="with Moopy | !credits"))
     print(f'✅ {bot.user.name} is online and ready!')
 
 @bot.event
 async def on_member_join(member):
-    # إيفنت الترحيب التلقائي وإعطاء هدية دخول
+    # ترحيب تلقائي + هدية دخول
     data = load_credits()
     user_id = str(member.id)
     gift = 50
@@ -48,22 +47,35 @@ async def on_member_join(member):
     
     channel = member.guild.system_channel
     if channel:
-        await channel.send(f"Welcome {member.mention} to the server! 🎉 You've received `{gift}` starting credits!")
+        await channel.send(f"Welcome {member.mention}! 🎉 You've received `{gift}` starting credits!")
 
 @bot.event
 async def on_message(message):
-    # منع البوت من الرد على نفسه (عشان ما يصير تكرار أو Spam)
     if message.author == bot.user:
         return
 
-    # رد تلقائي ذكي
+    # ردود تلقائية ذكية
     if message.content.lower() in ["hi", "hello", "سلام"]:
-        await message.channel.send(f"Hello {message.author.name}! How are you today? 😊")
+        await message.channel.send(f"Hello {message.author.name}! 😊")
 
-    # ضروري جداً عشان الأوامر (!credits) تشتغل مع وجود الإيفنت
+    # ضروري جداً عشان الأوامر تشتغل
     await bot.process_commands(message)
 
-# --- 💰 أوامر الاقتصاد (Commands) ---
+# --- 👑 أمر المالك الحصري (Owner Only) ---
+
+@bot.command()
+async def ac(ctx, member: discord.Member, amount: int):
+    # لا يمكن لأحد استخدامه إلا صاحب السيرفر فقط
+    if ctx.author.id == ctx.guild.owner_id:
+        data = load_credits()
+        user_id = str(member.id)
+        data[user_id] = data.get(user_id, 0) + amount
+        save_credits(data)
+        await ctx.send(f"👑 **Owner Action:** Added `{amount}` credits to **{member.name}**!")
+    else:
+        await ctx.send("❌ Only the **Server Owner** can use this command!")
+
+# --- 💰 أوامر الاقتصاد (Economy) ---
 
 @bot.command()
 async def credits(ctx, member: discord.Member = None):
@@ -85,10 +97,7 @@ async def daily(ctx):
 
 @bot.command()
 async def transfer(ctx, member: discord.Member, amount: int):
-    if amount <= 0:
-        await ctx.send("❌ Amount must be positive!")
-        return
-    
+    if amount <= 0: return
     data = load_credits()
     sender_id = str(ctx.author.id)
     receiver_id = str(member.id)
@@ -102,19 +111,16 @@ async def transfer(ctx, member: discord.Member, amount: int):
     save_credits(data)
     await ctx.send(f"✅ Transferred `{amount}` credits to **{member.name}**.")
 
-# --- 🎮 ألعاب التسلية ---
+# --- 🎮 ألعاب التسلية (Games) ---
 
 @bot.command()
 async def coinflip(ctx, choice: str, amount: int):
-    if amount <= 0:
-        await ctx.send("❌ Minimum bet is 1 credit!")
-        return
-
+    if amount <= 0: return
     data = load_credits()
     user_id = str(ctx.author.id)
     
     if data.get(user_id, 0) < amount:
-        await ctx.send("❌ You don't have enough credits to bet!")
+        await ctx.send("❌ Not enough credits!")
         return
 
     result = random.choice(["heads", "tails"])
@@ -124,12 +130,45 @@ async def coinflip(ctx, choice: str, amount: int):
     else:
         data[user_id] -= amount
         msg = f"💀 **Lost!** It was **{result}**. You lost `{amount}` credits."
-    
     save_credits(data)
     await ctx.send(msg)
+
+@bot.command()
+async def slots(ctx, amount: int):
+    if amount <= 0: return
+    data = load_credits()
+    user_id = str(ctx.author.id)
+    if data.get(user_id, 0) < amount:
+        await ctx.send("❌ Not enough credits!")
+        return
+
+    items = ["🍎", "🍋", "💎", "🔔", "🍒"]
+    s1, s2, s3 = random.choice(items), random.choice(items), random.choice(items)
+    display = f"**[ {s1} | {s2} | {s3} ]**\n"
+    
+    if s1 == s2 == s3:
+        win = amount * 10
+        data[user_id] += win
+        await ctx.send(f"{display} 🎉 JACKPOT! Won `{win}`!")
+    elif s1 == s2 or s2 == s3 or s1 == s3:
+        win = amount * 2
+        data[user_id] += win
+        await ctx.send(f"{display} ✨ Nice! Won `{win}`!")
+    else:
+        data[user_id] -= amount
+        await ctx.send(f"{display} 💀 Better luck next time!")
+    save_credits(data)
+
+# --- 🛠️ أوامر الإدارة (Admin) ---
+
+@bot.command()
+@commands.has_permissions(manage_messages=True)
+async def clear(ctx, amount: int):
+    await ctx.channel.purge(limit=amount + 1)
+    await ctx.send(f"🧹 Deleted `{amount}` messages!", delete_after=5)
 
 # تشغيل البوت
 if token:
     bot.run(token)
 else:
-    print("❌ Error: No Token found!")
+    print("❌ Error: No DISCORD_TOKEN found!")
