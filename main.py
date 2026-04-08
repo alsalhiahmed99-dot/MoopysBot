@@ -13,8 +13,8 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
-# 🛠️ تم تغيير البريفكس من ! إلى ؟ بطلب من Moopy
-bot = commands.Bot(command_prefix='؟', intents=intents)
+# 🛠️ تم ضبط البريفكس ليكون علامة الاستفهام الإنجليزية "?"
+bot = commands.Bot(command_prefix='?', intents=intents)
 bot.remove_command('help') 
 
 ECONOMY_FILE = "credits.json"
@@ -35,23 +35,29 @@ def save_credits(data):
 @bot.event
 async def on_ready():
     # تحديث الحالة لتناسب البريفكس الجديد
-    await bot.change_presence(activity=discord.Game(name="with Moopy | ؟help"))
-    print(f'✅ {bot.user.name} is online with Prefix (؟)!')
+    await bot.change_presence(activity=discord.Game(name="with Moopy | ?help"))
+    print(f'✅ {bot.user.name} is online with Prefix (?)!')
 
 @bot.event
 async def on_message(message):
     if message.author.bot: return
     await bot.process_commands(message)
 
-# --- 📜 أمر المساعدة الاحترافي (محدث بالبريفكس الجديد) ---
+# --- 📜 أمر المساعدة (Help Command) ---
 
 @bot.command()
 async def help(ctx):
-    embed = discord.Embed(title="🤖 Moopys Bot Help", color=discord.Color.gold())
-    embed.add_field(name="💰 Economy", value="`؟credits`, `؟daily`, `؟transfer`", inline=False)
-    embed.add_field(name="🎮 Games", value="`؟coinflip`, `؟slots`", inline=False)
-    embed.add_field(name="🛠️ Admin", value="`؟clear`, `؟ac (Owner)`")
-    embed.set_footer(text="Developed by Ahmad 👑")
+    embed = discord.Embed(
+        title="🤖 Moopys Bot Help Menu",
+        description="All commands use the `?` prefix",
+        color=discord.Color.gold()
+    )
+    
+    embed.add_field(name="💰 Economy", value="`?credits`, `?daily`, `?transfer`", inline=False)
+    embed.add_field(name="🎮 Games", value="`?coinflip`, `?slots`", inline=False)
+    embed.add_field(name="🛠️ Admin", value="`?clear`, `?ac (Owner Only)`")
+    
+    embed.set_footer(text="Developed by Ahmad for Moopy 👑")
     await ctx.send(embed=embed)
 
 # --- 👑 أمر المالك (Owner Only) ---
@@ -63,17 +69,18 @@ async def ac(ctx, member: discord.Member, amount: int):
         user_id = str(member.id)
         data[user_id] = data.get(user_id, 0) + amount
         save_credits(data)
-        await ctx.send(f"👑 Added `{amount}` to **{member.name}**!")
+        await ctx.send(f"👑 Added `{amount}` credits to **{member.name}**!")
     else:
-        await ctx.send("❌ Owners only!")
+        await ctx.send("❌ Only the Server Owner can use this!")
 
-# --- 💰 الاقتصاد ---
+# --- 💰 الاقتصاد (Daily = 200) ---
 
 @bot.command()
 async def credits(ctx, member: discord.Member = None):
     member = member or ctx.author
     data = load_credits()
-    await ctx.send(f"💰 **{member.name}**, your balance: `{data.get(str(member.id), 0)}`")
+    balance = data.get(str(member.id), 0)
+    await ctx.send(f"💰 **{member.name}**, your balance is: `{balance}` credits.")
 
 @bot.command()
 @commands.cooldown(1, 86400, commands.BucketType.user)
@@ -89,12 +96,12 @@ async def daily(ctx):
 async def transfer(ctx, member: discord.Member, amount: int):
     data = load_credits()
     if data.get(str(ctx.author.id), 0) < amount or amount <= 0:
-        await ctx.send("❌ Invalid amount!")
+        await ctx.send("❌ You don't have enough credits!")
         return
     data[str(ctx.author.id)] -= amount
     data[str(member.id)] = data.get(str(member.id), 0) + amount
     save_credits(data)
-    await ctx.send(f"✅ Sent `{amount}` to **{member.name}**.")
+    await ctx.send(f"✅ Successfully transferred `{amount}` to **{member.name}**.")
 
 # --- 🎮 الألعاب ---
 
@@ -102,22 +109,22 @@ async def transfer(ctx, member: discord.Member, amount: int):
 async def coinflip(ctx, choice: str, amount: int):
     data = load_credits()
     if data.get(str(ctx.author.id), 0) < amount or amount <= 0:
-        await ctx.send("❌ No credits!")
+        await ctx.send("❌ Not enough credits!")
         return
     result = random.choice(["heads", "tails"])
     if choice.lower() == result:
         data[str(ctx.author.id)] += amount
-        await ctx.send(f"🎉 Winner! It was {result}.")
+        await ctx.send(f"🎉 Winner! It was **{result}**.")
     else:
         data[str(ctx.author.id)] -= amount
-        await ctx.send(f"💀 Lost! It was {result}.")
+        await ctx.send(f"💀 Lost! It was **{result}**.")
     save_credits(data)
 
 @bot.command()
 async def slots(ctx, amount: int):
     data = load_credits()
     if data.get(str(ctx.author.id), 0) < amount:
-        await ctx.send("❌ No credits!")
+        await ctx.send("❌ Not enough credits!")
         return
     items = ["🍎", "💎", "🍒"]
     s = [random.choice(items) for _ in range(3)]
@@ -127,10 +134,10 @@ async def slots(ctx, amount: int):
         await ctx.send(f"{res} 🎯 JACKPOT!")
     elif s[0] == s[1] or s[1] == s[2] or s[0] == s[2]:
         data[str(ctx.author.id)] += amount * 2
-        await ctx.send(f"{res} ✨ Win!")
+        await ctx.send(f"{res} ✨ Nice! You won double.")
     else:
         data[str(ctx.author.id)] -= amount
-        await ctx.send(f"{res} 💀 Lost.")
+        await ctx.send(f"{res} 💀 Better luck next time!")
     save_credits(data)
 
 # --- 🛠️ الإدارة ---
@@ -139,7 +146,7 @@ async def slots(ctx, amount: int):
 @commands.has_permissions(manage_messages=True)
 async def clear(ctx, amount: int):
     await ctx.channel.purge(limit=amount + 1)
-    await ctx.send(f"🧹 Deleted {amount} messages.", delete_after=3)
+    await ctx.send(f"🧹 Cleared `{amount}` messages.", delete_after=3)
 
 if token:
     bot.run(token)
