@@ -12,8 +12,10 @@ token = os.getenv('DISCORD_TOKEN')
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
-bot = commands.Bot(command_prefix='!', intents=intents)
-bot.remove_command('help') # حذف الهيلب القديم
+
+# 🛠️ تم تغيير البريفكس من ! إلى ؟ بطلب من Moopy
+bot = commands.Bot(command_prefix='؟', intents=intents)
+bot.remove_command('help') 
 
 ECONOMY_FILE = "credits.json"
 
@@ -32,22 +34,23 @@ def save_credits(data):
 
 @bot.event
 async def on_ready():
-    await bot.change_presence(activity=discord.Game(name="with Moopy | !help"))
-    print(f'✅ {bot.user.name} is online!')
+    # تحديث الحالة لتناسب البريفكس الجديد
+    await bot.change_presence(activity=discord.Game(name="with Moopy | ؟help"))
+    print(f'✅ {bot.user.name} is online with Prefix (؟)!')
 
 @bot.event
 async def on_message(message):
     if message.author.bot: return
     await bot.process_commands(message)
 
-# --- 📜 أمر المساعدة الاحترافي ---
+# --- 📜 أمر المساعدة الاحترافي (محدث بالبريفكس الجديد) ---
 
 @bot.command()
 async def help(ctx):
     embed = discord.Embed(title="🤖 Moopys Bot Help", color=discord.Color.gold())
-    embed.add_field(name="💰 Economy", value="`!credits`, `!daily`, `!transfer`", inline=False)
-    embed.add_field(name="🎮 Games", value="`!coinflip`, `!slots`", inline=False)
-    embed.add_field(name="🛠️ Admin", value="`!clear`, `!ac (Owner)`")
+    embed.add_field(name="💰 Economy", value="`؟credits`, `؟daily`, `؟transfer`", inline=False)
+    embed.add_field(name="🎮 Games", value="`؟coinflip`, `؟slots`", inline=False)
+    embed.add_field(name="🛠️ Admin", value="`؟clear`, `؟ac (Owner)`")
     embed.set_footer(text="Developed by Ahmad 👑")
     await ctx.send(embed=embed)
 
@@ -64,7 +67,7 @@ async def ac(ctx, member: discord.Member, amount: int):
     else:
         await ctx.send("❌ Owners only!")
 
-# --- 💰 الاقتصاد (تم تعديل الـ Daily لـ 200) ---
+# --- 💰 الاقتصاد ---
 
 @bot.command()
 async def credits(ctx, member: discord.Member = None):
@@ -77,7 +80,7 @@ async def credits(ctx, member: discord.Member = None):
 async def daily(ctx):
     data = load_credits()
     user_id = str(ctx.author.id)
-    reward = 200  # تم التعديل بطلب من Moopy
+    reward = 200 
     data[user_id] = data.get(user_id, 0) + reward
     save_credits(data)
     await ctx.send(f"🎁 **{ctx.author.name}**, you claimed your daily `{reward}` credits!")
