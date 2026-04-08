@@ -15,6 +15,9 @@ intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+# حذف أمر help الافتراضي عشان نشغل حقنا الجديد
+bot.remove_command('help')
+
 ECONOMY_FILE = "credits.json"
 
 def load_credits():
@@ -32,12 +35,12 @@ def save_credits(data):
 
 @bot.event
 async def on_ready():
-    await bot.change_presence(activity=discord.Game(name="with Moopy | !credits"))
+    await bot.change_presence(activity=discord.Game(name="with Moopy | !help"))
     print(f'✅ {bot.user.name} is ONLINE. Make sure other instances are CLOSED!')
 
 @bot.event
 async def on_message(message):
-    # 🛡️ السطر المنقذ: يمنع البوت من الرد على نفسه أو أي بوت آخر (يحل مشكلة التكرار)
+    # 🛡️ السطر المنقذ: يمنع البوت من الرد على نفسه أو أي بوت آخر
     if message.author.bot:
         return
 
@@ -57,6 +60,40 @@ async def on_member_join(member):
     channel = member.guild.system_channel
     if channel:
         await channel.send(f"Welcome {member.mention}! 🎉 You got `50` credits!")
+
+# --- 📜 أمر المساعدة (Help Command) ---
+
+@bot.command()
+async def help(ctx):
+    embed = discord.Embed(
+        title="🤖 Moopys Bot Help Menu",
+        description="List of all available commands for the server:",
+        color=discord.Color.blue()
+    )
+    
+    # قسم الفلوس
+    embed.add_field(
+        name="💰 Economy", 
+        value="`!credits` - Check balance\n`!daily` - Get daily 100 credits\n`!transfer @user [amount]` - Send credits to someone", 
+        inline=False
+    )
+    
+    # قسم الألعاب
+    embed.add_field(
+        name="🎮 Games", 
+        value="`!coinflip [heads/tails] [amount]` - Gamble credits\n`!slots [amount]` - Play the slot machine", 
+        inline=False
+    )
+    
+    # قسم الإدارة
+    embed.add_field(
+        name="🛠️ Admin & Owner", 
+        value="`!clear [number]` - Delete messages\n`!ac @user [amount]` - Add credits (Owner Only)", 
+        inline=False
+    )
+    
+    embed.set_footer(text=f"Developed by Ahmad for {ctx.guild.name} 👑")
+    await ctx.send(embed=embed)
 
 # --- 👑 أمر المالك (Owner Only) ---
 
